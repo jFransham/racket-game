@@ -1,0 +1,9 @@
+[submodule "allegro"]
+	path = lib/allegro
+	url = git@github.com:jFransham/racket-allegro-5
+[submodule "scran"]
+	path = lib/scran
+	url = git@github.com:jFransham/scran
+[submodule "reloadable"]
+	path = lib/reloadable
+	url = git@github.com:jFransham/racket-reloadable
