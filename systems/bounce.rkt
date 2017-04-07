@@ -4,11 +4,12 @@ require
   prefix-in scran:   scran
   racket-game/macros
   racket-game/types
+  racket-game/vec2
   racket-game/components
 
 provide add-sys!
 
-define (every e ent vel)
+define (every dt e ent vel)
   define*
     size         $ entity-size ent
     top-left     $ entity-position ent
@@ -17,16 +18,27 @@ define (every e ent vel)
     right        $ vec2-x bottom-right
     top          $ vec2-y top-left
     bottom       $ vec2-y bottom-right
-    out-mul
+    xvel         $ vec2-x vel
+    yvel         $ vec2-y vel
+    xspeed       $ abs xvel
+    yspeed       $ abs yvel
+    new-speed
       vec2
-        if {{left < 0} or {right > 640}} ;; HACK
-          -1
-          1
-        if {{top < 0} or {bottom > 480}} ;; HACK
-          -1
-          1
-
-  set-vec2! vel {out-mul v* vel}
+        cond
+          {left < 0}
+            xspeed
+          {right > 640}
+            - xspeed
+          else
+            xvel
+        cond
+          {top < 0}
+            yspeed
+          {bottom > 480}
+            - yspeed
+          else
+            yvel
+  set-vec2! vel new-speed
 
 define (add-sys! c w)
   scran:system! c w

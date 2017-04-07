@@ -56,11 +56,10 @@ define*
                     add-systems! (components) (world)
   image        $ allegro:load-bitmap "/home/jef/Pictures/baby.png"
 
-define (tick [dt #f])
-  displayln dt
+define (tick dt)
   scran:system-execute (world) (sys-physics (systems)) dt
-  scran:system-execute (world) (sys-bounce (systems))
-  scran:system-execute (world) (sys-render (systems))
+  scran:system-execute (world) (sys-bounce (systems))  dt
+  scran:system-execute (world) (sys-render (systems))  dt
 
 define (loop [last-time 0.0] [cur-time #f] [redraw? #f])
   when {redraw? and cur-time}

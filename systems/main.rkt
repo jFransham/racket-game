@@ -2,9 +2,10 @@
 
 require
   prefix-in scran: scran
-  prefix-in render: racket-game/systems/render
+  prefix-in render:  racket-game/systems/render
   prefix-in physics: racket-game/systems/physics
-  prefix-in bounce: racket-game/systems/bounce
+  prefix-in bounce:  racket-game/systems/bounce
+  prefix-in repl:    racket-game/systems/repl
   racket-game/reloadable-helpers
   racket-game/types
 

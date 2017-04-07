@@ -4,6 +4,7 @@ require
   prefix-in scran:   scran
   racket-game/macros
   racket-game/types
+  racket-game/vec2
   racket-game/components
 
 provide add-sys!

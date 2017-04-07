@@ -19,7 +19,7 @@ define*
 define (pre)
   allegro:clear-to-color screen-color
 
-define (every e ent)
+define (every dt e ent)
   let ([p (entity-position ent)])
     allegro:draw-bitmap
       entity-image ent
@@ -34,5 +34,5 @@ define (add-sys! c w)
   scran:system! c w
     list cmp-entity
     #:pre   (λ () (pre))
-    #:every (λ (e ent) (every e ent))
+    #:every (λ args (apply every args))
     #:post  (λ () (post))
