@@ -8,8 +8,15 @@ require
   racket-game/components
   racket-game/macros
   racket-game/types
+  racket-game/vec2
 
 provide run-game
+
+void
+  make-persistent-state 'allegro     allegro:install-system
+  make-persistent-state 'image-addon allegro:init-image-addon
+  make-persistent-state 'font-addon  allegro:init-font-addon
+  make-persistent-state 'ttf-addon   allegro:init-ttf-addon
 
 define*
   screen-w     $ 640
@@ -17,19 +24,10 @@ define*
   fps          $ 60
   debug?       $ #t
 
-  allegro      $ make-persistent-state 'allegro
-                  allegro:install-system
-  image-addon  $ make-persistent-state 'image-addon
-                  allegro:init-image-addon
-  font-addon   $ make-persistent-state 'font-addon
-                  allegro:init-font-addon
-  ttf-addon    $ make-persistent-state 'ttf-addon
-                  allegro:init-ttf-addon
   keyboard     $ make-persistent-state 'keyboard
                   allegro:install-keyboard
   mouse        $ make-persistent-state 'mouse
                   allegro:install-mouse
-
   screen       $ make-persistent-state 'main-display
                   λ () (allegro:create-display screen-w screen-h)
   timer        $ make-persistent-state 'main-timer
@@ -54,50 +52,106 @@ define*
   systems      $ make-persistent-state 'main-systems
                    λ ()
                     add-systems! (components) (world)
-  image        $ allegro:load-bitmap "/home/jef/Pictures/baby.png"
+  image        $ "/home/jef/Pictures/baby.png"
+  should-load? $ make-persistent-state 'main-should-load
+                   λ ()
+                    #f
+  should-save? $ make-persistent-state 'main-should-sav
+                   λ ()
+                    #f
+
+
+define (deserialize)
+  define state
+    with-input-from-file "current-state.rkt"
+      λ () (eval (read) (make-base-namespace))
+  scran:reset-all-systems! (world)
+  for ([ent-set state])
+    apply scran:entity! (world) ent-set
+  should-load? #f
+
+define (serialize)
+  define entities
+    hash-map (scran:world-entities (world))
+      λ (k v)
+        hash-map v cons
+
+  with-output-to-file "current-state.rkt"
+    λ () (print entities)
+    #:exists 'replace
+  should-save? #f
 
 define (tick dt)
-  scran:system-execute (world) (sys-physics (systems)) dt
-  scran:system-execute (world) (sys-bounce (systems))  dt
-  scran:system-execute (world) (sys-render (systems))  dt
+  when (should-load?) (deserialize)
+  when (should-save?) (serialize)
+  for ([s (get-systems (systems))])
+    scran:system-execute (world) s dt
 
-define (loop [last-time 0.0] [cur-time #f] [redraw? #f])
-  when {redraw? and cur-time}
-    tick {cur-time - last-time}
+define (loop last-time cur-time)
+  tick {cur-time - last-time}
+  get-event cur-time
 
-  define event $ allegro:wait-for-event (event-queue)
-  match event
-    (allegro:KeyboardEvent
-      type
-      source
-      timestamp
-      display
-      keycode
-      unicode
-      modifiers
-      repeat)
-      match type
-        'KeyChar
-          case keycode
-            (Escape)
-              displayln "Quitting!"
-              exit 0
+define (get-event [last-time 0.0] [cur-time #f])
+  if {cur-time and (allegro:is-event-queue-empty (event-queue))}
+    loop last-time cur-time
+    let
+      \\
+        event $ allegro:wait-for-event (event-queue)
+        next  $ λ ([t cur-time]) (get-event last-time t)
+      match event
+        (allegro:KeyboardEvent
+          type
+          source
+          timestamp
+          display
+          keycode
+          unicode
+          modifiers
+          repeat)
+          match type
+            'KeyChar
+              begin
+                case keycode
+                  (Escape)
+                    displayln "Quitting!"
+                    exit 0
+                  (L)
+                    should-load? #t
+                  (S)
+                    should-save? #t
+                (next)
             else
-              loop last-time cur-time redraw?
+              (next)
+        (allegro:TimerEvent type source timestamp count error)
+          next timestamp
         else
-          loop last-time cur-time redraw?
-    (allegro:TimerEvent type source timestamp count error)
-      loop {cur-time or 0.0} timestamp #t
-    else
-      loop last-time cur-time redraw?
-  loop last-time cur-time redraw?
+          (next)
+
+define (fl-random mn mx)
+  define rand-range {mx - mn}
+  {mn + {(random) * rand-range}}
 
 define (run-game)
-  scran:entity! (world)
-    list
-      cmp-entity (components)
-      entity image (vec2 0.0 0.0) (vec2 272.0 272.0)
-    list
-      cmp-velocity (components)
-      vec2 100.0 100.0
-  allegro:run loop
+  define*
+    ent-size $ 272.0
+    max-x    $ {screen-w - ent-size}
+    max-y    $ {screen-h - ent-size}
+
+  for ([i (in-range 0 0)])
+    scran:entity! (world)
+      list
+        cmp-entity (components)
+        entity
+          vec2
+            fl-random 0.0 max-x
+            fl-random 0.0 max-y
+          vec2
+            ent-size
+            ent-size
+      list
+        cmp-velocity (components)
+        {130.0 v* (norm (vec2 (fl-random -1 1) (fl-random -1 1)))}
+      list
+        cmp-image (components)
+        bitmap image
+  allegro:run get-event

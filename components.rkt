@@ -10,7 +10,7 @@ provide
   add-components!
 
 struct cmp
-  entity velocity
+  entity velocity image
   #:prefab
 
 define (c-update/identity entity val)
@@ -19,6 +19,11 @@ define (c-update/identity entity val)
 define c/entity
   invariant-assertion
     -> scran:entity? entity? entity?
+    c-update/identity
+
+define c/image
+  invariant-assertion
+    -> scran:entity? bitmap? bitmap?
     c-update/identity
 
 define c/velocity
@@ -30,3 +35,4 @@ define (add-components! world)
   cmp
     scran:component! world c/entity
     scran:component! world c/velocity
+    scran:component! world c/image

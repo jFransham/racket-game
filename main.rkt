@@ -1,10 +1,5 @@
 #lang sweet-exp racket
 
-require
-  reloadable
-  racket-game/reloadable-helpers
+require racket-game/game
 
-define main
-  (make-reloadable 'run-game "game.rkt")
-
-(main)
+(run-game)

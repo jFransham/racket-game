@@ -8,16 +8,19 @@ require
 provide
   v+
   v*
+  norm
   set-vec2!
 
-define (vlen v)
+define (vlen-squared v)
   define*
     x (vec2-x v)
     y (vec2-y v)
   {{x fl* x} + {y fl* y}}
 
+define vlen (compose sqrt vlen-squared)
+
 define (norm v)
-  {v v* {1 / (vlen v)}}
+  {v v* (/ (vlen v))}
 
 define {v1 v+ v2}
   vec2
@@ -34,8 +37,3 @@ define {fs v* sn}
       {(vec2 multiplier multiplier) v* vec}
     (cons (? vec2? vec) (? number? multiplier))
       {multiplier v* vec}
-
-define (set-vec2! last-v cur-v)
-  set-vec2-x! last-v (vec2-x cur-v)
-  set-vec2-y! last-v (vec2-y cur-v)
-

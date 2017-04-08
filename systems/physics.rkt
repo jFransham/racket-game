@@ -9,11 +9,15 @@ require
 
 provide add-sys!
 
-define (every dt e ent vel)
+define (all ctx l)
+  void
+
+define (each dt e ent vel)
   set-entity-position! ent
     {(entity-position ent) v+ {dt v* vel}}
 
 define (add-sys! c w)
   scran:system! c w
     list cmp-entity cmp-velocity
-    #:every (λ args (apply every args))
+    #:each (λ args (apply each args))
+    #:all  (λ args (apply all args))

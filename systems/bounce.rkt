@@ -9,7 +9,7 @@ require
 
 provide add-sys!
 
-define (every dt e ent vel)
+define (each dt e ent vel)
   define*
     size         $ entity-size ent
     top-left     $ entity-position ent
@@ -43,4 +43,4 @@ define (every dt e ent vel)
 define (add-sys! c w)
   scran:system! c w
     list cmp-entity cmp-velocity
-    #:every (λ args (apply every args))
+    #:each (λ args (apply each args))
