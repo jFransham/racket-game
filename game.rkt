@@ -8,6 +8,7 @@ require
   racket-game/components
   racket-game/macros
   racket-game/types
+  racket-game/keys
   racket-game/vec2
 
 provide run-game
@@ -44,14 +45,6 @@ define*
                         (allegro:get-keyboard-event-source)
                       queue
 
-  world        $ make-persistent-state 'main-world
-                  scran:default-world
-  components   $ make-persistent-state 'main-components
-                   λ ()
-                    add-components! (world)
-  systems      $ make-persistent-state 'main-systems
-                   λ ()
-                    add-systems! (components) (world)
   image        $ "/home/jef/Pictures/baby.png"
   should-load? $ make-persistent-state 'main-should-load
                    λ ()
@@ -60,19 +53,18 @@ define*
                    λ ()
                     #f
 
-
-define (deserialize)
+define (deserialize! world)
   define state
     with-input-from-file "current-state.rkt"
       λ () (eval (read) (make-base-namespace))
-  scran:reset-all-systems! (world)
+  scran:reset-all-systems! world
   for ([ent-set state])
-    apply scran:entity! (world) ent-set
+    apply scran:entity! world ent-set
   should-load? #f
 
-define (serialize)
+define (serialize world)
   define entities
-    hash-map (scran:world-entities (world))
+    hash-map (scran:world-entities world)
       λ (k v)
         hash-map v cons
 
@@ -81,23 +73,33 @@ define (serialize)
     #:exists 'replace
   should-save? #f
 
-define (tick dt)
-  when (should-load?) (deserialize)
-  when (should-save?) (serialize)
-  for ([s (get-systems (systems))])
-    scran:system-execute (world) s dt
+define (tick world systems dt)
+  when (should-load?) (deserialize! world)
+  when (should-save?) (serialize world)
 
-define (loop last-time cur-time)
-  tick {cur-time - last-time}
-  get-event cur-time
+  define ctx void
 
-define (get-event [last-time 0.0] [cur-time #f])
+  for ([s (get-systems systems)])
+    scran:system-execute world s dt
+
+define (loop world systems last-time cur-time last-keys cur-keys)
+  unless {(set-empty? last-keys) and (set-empty? cur-keys)}
+    pretty-print $ make-keys last-keys cur-keys
+  tick world systems {cur-time - last-time}
+  get-event world systems cur-time cur-keys
+
+define (get-event world
+                  systems
+                  [last-time 0.0]
+                  [last-keys (set)]
+                  [cur-time #f]
+                  [cur-keys (set)])
   if {cur-time and (allegro:is-event-queue-empty (event-queue))}
-    loop last-time cur-time
+    loop world systems last-time cur-time last-keys cur-keys
     let
       \\
         event $ allegro:wait-for-event (event-queue)
-        next  $ λ ([t cur-time]) (get-event last-time t)
+        next  $ curry get-event world systems last-time last-keys
       match event
         (allegro:KeyboardEvent
           type
@@ -110,37 +112,39 @@ define (get-event [last-time 0.0] [cur-time #f])
           repeat)
           match type
             'KeyChar
-              begin
-                case keycode
-                  (Escape)
-                    displayln "Quitting!"
-                    exit 0
-                  (L)
-                    should-load? #t
-                  (S)
-                    should-save? #t
-                (next)
+              case keycode
+                (Escape)
+                  displayln "Quitting!"
+                  exit 0
+                (L)
+                  should-load? #t
+                (S)
+                  should-save? #t
+              next cur-time (set-add cur-keys keycode)
             else
-              (next)
+              next cur-time cur-keys
         (allegro:TimerEvent type source timestamp count error)
-          next timestamp
+          next timestamp cur-keys
         else
-          (next)
+          next cur-time cur-keys
 
 define (fl-random mn mx)
   define rand-range {mx - mn}
   {mn + {(random) * rand-range}}
 
-define (run-game)
+define (run-game [debug? #f])
   define*
-    ent-size $ 272.0
-    max-x    $ {screen-w - ent-size}
-    max-y    $ {screen-h - ent-size}
+    ent-size   $ 272.0
+    max-x      $ {screen-w - ent-size}
+    max-y      $ {screen-h - ent-size}
+    world      $ (scran:default-world)
+    components $ add-components! world
+    systems    $ add-systems! components world debug?
 
-  for ([i (in-range 0 0)])
-    scran:entity! (world)
+  for ([i (in-range 0 100)])
+    scran:entity! world
       list
-        cmp-entity (components)
+        cmp-entity components
         entity
           vec2
             fl-random 0.0 max-x
@@ -149,9 +153,9 @@ define (run-game)
             ent-size
             ent-size
       list
-        cmp-velocity (components)
+        cmp-velocity components
         {130.0 v* (norm (vec2 (fl-random -1 1) (fl-random -1 1)))}
       list
-        cmp-image (components)
+        cmp-image components
         bitmap image
-  allegro:run get-event
+  allegro:run $ λ () (get-event world systems)

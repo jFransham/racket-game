@@ -6,6 +6,8 @@ provide
   struct-out entity
   struct-out vec2
   struct-out bitmap
+  struct-out keys
+  struct-out context
   struct-out ecs-system
   set-bitmap!
   set-entity!
@@ -27,6 +29,14 @@ struct entity
 struct bitmap (image-path)
   #:prefab
   #:mutable
+
+struct keys
+  down pressed released
+  #:prefab
+
+struct context
+  dt keys
+  #:prefab
 
 define (set-bitmap! o n)
   set-bitmap-image-path! o (bitmap-image-path n)

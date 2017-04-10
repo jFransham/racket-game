@@ -20,12 +20,14 @@ define port
 define server
   make-persistent-state 'repl-server
     λ ()
-      fprintf (current-output-port) "Listening on port ~a~n" (port)
-      tcp-listen (port) 4 #f "127.0.0.1"
+      lazy
+        fprintf (current-output-port) "Listening on port ~a~n" (port)
+        tcp-listen (port) 4 #f "127.0.0.1"
 
 define (pre ctx)
-  when (tcp-accept-ready? (server))
-    let-values ([(in out) (tcp-accept (server))])
+  define srv (force (server))
+  when (tcp-accept-ready? srv)
+    let-values ([(in out) (tcp-accept srv)])
       parameterize
         \\
           current-namespace   (namespace-anchor->namespace namespace-anchor)

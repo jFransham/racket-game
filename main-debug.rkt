@@ -7,4 +7,4 @@ require
 define main
   (make-reloadable 'run-game "game.rkt")
 
-(main)
+(main #t)
